@@ -1,33 +1,41 @@
 from modelos import InversionEntrada, ResultadoReparto
 
 def calcular_reparto(data: InversionEntrada) -> ResultadoReparto:
-    A = data.aportaciones
-    r = data.interes
-    n = data.periodos
+    aportaciones = data.aportaciones
+    interes = data.interes
+    periodos = data.periodos
 
-    # Cálculo del valor futuro individual y total
-    VF_individuales = [round(c * (1 + r) ** n, 2) for c in A]
-    VF_total = round(sum(VF_individuales), 2)
-    capital_total = round(sum(A), 2)
-    beneficio_total = round(VF_total - capital_total, 2)
+    # 🚫 Validaciones
+    if not aportaciones or len(aportaciones) < 2:
+        raise ValueError("Debe haber al menos dos inversores.")
+    
+    if any(a <= 0 for a in aportaciones):
+        raise ValueError("Todas las aportaciones deben ser mayores que cero.")
 
-    # Reparto proporcional
-    proporciones = [a / capital_total for a in A]
-    beneficios = [round(p * beneficio_total, 2) for p in proporciones]
+    if interes <= 0:
+        raise ValueError("El interés debe ser un valor positivo.")
 
-    # Diccionario de resultados
-    beneficios_dict = {f"beneficio_{i+1}": beneficios[i] for i in range(len(A))}
+    if periodos <= 0:
+        raise ValueError("El número de periodos debe ser un valor entero positivo.")
 
-    explicacion = (
-        f"Con un interés del {r*100:.2f}% durante {n} períodos, "
-        f"la inversión total genera un valor futuro de {VF_total}.\n\n"
-        f"El beneficio total es {beneficio_total} y se reparte proporcionalmente según las aportaciones iniciales:\n" +
-        "\n".join([f"Inversor {i+1} aporta {A[i]} y gana {beneficios[i]}" for i in range(len(A))])
-    )
+    # ✅ Cálculo
+    valor_futuro_total = sum(a * (1 + interes) ** periodos for a in aportaciones)
+    total_aportado = sum(aportaciones)
+    beneficio_total = valor_futuro_total - total_aportado
+
+    beneficios = {}
+    explicacion = f"Con un interés del {interes:.2%} durante {periodos} períodos, la inversión total genera un valor futuro de {valor_futuro_total:.1f}.\n\n"
+    explicacion += f"El beneficio total es {beneficio_total:.1f} y se reparte proporcionalmente según las aportaciones iniciales:\n"
+
+    for i, a in enumerate(aportaciones, 1):
+        proporcion = a / total_aportado
+        beneficio = proporcion * beneficio_total
+        beneficios[f"beneficio_{i}"] = round(beneficio, 2)
+        explicacion += f"Inversor {i} aporta {a:.1f} y gana {beneficio:.2f}\n"
 
     return ResultadoReparto(
-        valor_futuro_total=VF_total,
-        beneficio_total=beneficio_total,
-        beneficios_individuales=beneficios_dict,
+        valor_futuro_total=round(valor_futuro_total, 2),
+        beneficio_total=round(beneficio_total, 2),
+        beneficios_individuales=beneficios,
         explicacion=explicacion
     )
